@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Real-Time Packet Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial;
+      padding: 20px;
+      background-color: #f0f0f0;
+    }
+    canvas {
+      max-width: 600px;
+    }
+    .section {
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Packet Sniffing Dashboard</h2>
+
+  <canvas id="trafficChart" width="600" height="300"></canvas>
+
+  <div class="section">
+    <h3>HTTP Hosts</h3>
+    <ul id="httpList"></ul>
+  </div>
+
+  <div class="section">
+    <h3>DNS Queries</h3>
+    <ul id="dnsList"></ul>
+  </div>
+
+  <div class="section">
+    <h3>TCP Source IPs</h3>
+    <ul id="tcpList"></ul>
+  </div>
+
+  <script>
+    const ctx = document.getElementById('trafficChart').getContext('2d');
+    const trafficChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: ['TCP', 'HTTP', 'DNS'],
+        datasets: [{
+          label: 'Packet Count',
+          data: [0, 0, 0],
+          backgroundColor: ['#007bff', '#28a745', '#ffc107']
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: {
+            beginAtZero: true
+          }
+        }
+      }
+    });
+
+    async function updateDashboard() {
+      try {
+        const response = await fetch('/data');
+        const data = await response.json();
+
+        // Update chart
+        trafficChart.data.datasets[0].data = [
+          data.counts.tcp,
+          data.counts.http,
+          data.counts.dns
+        ];
+        trafficChart.update();
+
+        // Update lists
+        document.getElementById('httpList').innerHTML =
+          data.http_hosts.map(h => `<li>${h}</li>`).join('');
+        document.getElementById('dnsList').innerHTML =
+          data.dns_queries.map(d => `<li>${d}</li>`).join('');
+        document.getElementById('tcpList').innerHTML =
+          data.tcp_sources.map(ip => `<li>${ip}</li>`).join('');
+
+      } catch (error) {
+        console.error("Dashboard update error:", error);
+      }
+    }
+
+    updateDashboard();
+    setInterval(updateDashboard, 3000);
+  </script>
+</body>
+</html>
